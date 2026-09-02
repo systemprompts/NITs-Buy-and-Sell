@@ -126,4 +126,6 @@ class Config:
         MOCK_AUTH = _bool(_mock, False if os.environ.get("VERCEL") else True)
 
     ALLOWED_DOMAIN = "nits.ac.in"
+    ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
+
 

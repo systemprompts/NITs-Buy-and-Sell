@@ -147,7 +147,7 @@ def post_comment(item_id):
 @login_required
 def toggle_status(item_id):
     item = Item.query.get_or_404(item_id)
-    if item.seller_id != current_user.id:
+    if item.seller_id != current_user.id and not current_user.is_admin:
         abort(403)
     item.status = STATUS_AVAILABLE if item.is_sold else STATUS_SOLD
     db.session.commit()
@@ -159,7 +159,7 @@ def toggle_status(item_id):
 @login_required
 def delete_item(item_id):
     item = Item.query.get_or_404(item_id)
-    if item.seller_id != current_user.id:
+    if item.seller_id != current_user.id and not current_user.is_admin:
         abort(403)
 
     image_keys = [img.filename for img in item.images]
@@ -172,3 +172,17 @@ def delete_item(item_id):
 
     flash("Item deleted successfully.", "success")
     return redirect(url_for('main.index'))
+
+
+@main_bp.route('/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    if comment.user_id != current_user.id and not current_user.is_admin and comment.item.seller_id != current_user.id:
+        abort(403)
+    item_id = comment.item_id
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Question deleted.", "info")
+    return redirect(url_for('main.item_detail', item_id=item_id))
+

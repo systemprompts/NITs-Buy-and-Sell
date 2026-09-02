@@ -41,6 +41,12 @@
                                 <p class="comment-head">
                                     <span class="comment-name">Anonymous_{{ c.user_id }}</span>
                                     <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
+                                    {% if current_user.is_authenticated and (current_user.id == c.user_id or current_user.id == item.seller_id or current_user.is_admin) %}
+                                    <form method="POST" action="{{ url_for('main.delete_comment', comment_id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this question?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-delete-subtle" title="Delete question">&times;</button>
+                                    </form>
+                                    {% endif %}
                                 </p>
                                 <p>{{ c.content }}</p>
                             </div>
@@ -50,7 +56,14 @@
                                 <p class="comment-head">
                                     <span class="comment-name">{{ ui.display_name(c.author.name, revealed) }}</span>
                                     <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
+                                    {% if current_user.is_authenticated and (current_user.id == c.user_id or current_user.id == item.seller_id or current_user.is_admin) %}
+                                    <form method="POST" action="{{ url_for('main.delete_comment', comment_id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this question?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-delete-subtle" title="Delete question">&times;</button>
+                                    </form>
+                                    {% endif %}
                                 </p>
+
                                 <p>{{ c.content }}</p>
                             </div>
                         {% endif %}
@@ -141,7 +154,7 @@
                 <p class="muted">No extra contact details — use the email above.</p>
                 {% endif %}
 
-                {% if current_user.id == item.seller_id %}
+                {% if current_user.id == item.seller_id or current_user.is_admin %}
                 <div class="owner-actions">
                     <form method="POST" action="{{ url_for('main.toggle_status', item_id=item.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -156,6 +169,7 @@
                     </form>
                 </div>
                 {% endif %}
+
             {% else %}
                 <div class="signin-gate">
                     <p>Contact details are shown to signed-in students.</p>
