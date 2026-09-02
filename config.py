@@ -59,6 +59,11 @@ def _resolve_storage():
     ref = ""
     if supabase_url:
         ref = (urlparse(supabase_url).hostname or "").split(".")[0]
+    elif endpoint:
+        ref = (urlparse(endpoint).hostname or "").split(".")[0]
+
+    if not supabase_url and ref:
+        supabase_url = f"https://{ref}.supabase.co"
     if not endpoint and ref:
         endpoint = f"https://{ref}.storage.supabase.co/storage/v1/s3"
 
@@ -80,6 +85,7 @@ def _resolve_storage():
         "SUPABASE_PUBLIC_URL_BASE": public_url_base,
         "STORAGE_BACKEND": backend,
     }
+
 
 
 class Config:
