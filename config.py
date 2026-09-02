@@ -1,5 +1,5 @@
 import os
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote_plus, unquote, urlparse
 from dotenv import load_dotenv
 from sqlalchemy.pool import NullPool
 
@@ -11,6 +11,23 @@ def _bool(val, default=False):
     if val is None:
         return default
     return str(val).lower() in ("true", "1", "t", "yes")
+
+
+def _clean_database_url(url):
+    if not url or "@" not in url:
+        return url
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    prefix_and_creds, sep, host_and_path = url.rpartition("@")
+    if "://" in prefix_and_creds:
+        scheme, creds = prefix_and_creds.split("://", 1)
+        if ":" in creds:
+            user, pwd = creds.split(":", 1)
+            raw_pwd = unquote(pwd)
+            encoded_pwd = quote_plus(raw_pwd)
+            return f"{scheme}://{user}:{encoded_pwd}@{host_and_path}"
+    return url
+
 
 
 def _resolve_database_uri():
@@ -27,13 +44,13 @@ def _resolve_database_uri():
     if not url:
         return "sqlite:///" + os.path.join(basedir, "app.db")
 
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+    url = _clean_database_url(url)
 
     if url.startswith("postgresql://") and "sslmode=" not in url:
         url += ("&" if "?" in url else "?") + "sslmode=require"
 
     return url
+
 
 
 def _resolve_storage():
