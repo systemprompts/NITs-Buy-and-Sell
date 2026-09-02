@@ -100,7 +100,12 @@ class Config:
     WTF_CSRF_TIME_LIMIT = None
     WTF_CSRF_SSL_STRICT = False
 
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = bool(os.environ.get("VERCEL") or (os.environ.get("SITE_URL") and os.environ.get("SITE_URL").startswith("https")))
+
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 4500000))
+
     MAX_IMAGE_BYTES = int(os.environ.get("MAX_IMAGE_BYTES", 2097152))
     MAX_IMAGES_PER_ITEM = int(os.environ.get("MAX_IMAGES_PER_ITEM", 5))
 

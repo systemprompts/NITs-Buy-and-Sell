@@ -115,10 +115,19 @@ def create_app(config_class=Config):
                                title="Page not found",
                                message="That listing may have been de-listed, or the link is wrong."), 404
 
+    @app.after_request
+    def set_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
     @app.errorhandler(CSRFError)
     def _csrf_error(_e):
         flash("Your session expired. Please try that again.", "warning")
-        return redirect(request.referrer or url_for("main.index"))
+        return redirect(url_for("main.index"))
+
 
     @app.errorhandler(Exception)
     def _handle_exception(e):
