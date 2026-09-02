@@ -29,22 +29,38 @@ def _domain_allowed(email):
 @auth_bp.route('/login')
 def login():
     if current_app.config.get('MOCK_AUTH'):
-        user = User.query.filter_by(email="student@nits.ac.in").first()
-        if not user:
-            user = User(
-                google_id="mock_ggl_id",
-                email="student@nits.ac.in",
-                name="Mock Student",
-                picture="https://ui-avatars.com/api/?name=Mock+Student",
-            )
-            db.session.add(user)
-            db.session.commit()
-        login_user(user)
-        flash("Logged in with mock auth.", "success")
+        try:
+            user = User.query.filter_by(email="student@nits.ac.in").first()
+            if not user:
+                user = User(
+                    google_id="mock_ggl_id",
+                    email="student@nits.ac.in",
+                    name="Mock Student",
+                    picture="https://ui-avatars.com/api/?name=Mock+Student",
+                )
+                db.session.add(user)
+                db.session.commit()
+            login_user(user)
+            flash("Logged in with mock auth.", "success")
+        except Exception as exc:
+            current_app.logger.error("Mock auth login failed: %s", exc)
+            flash("Database error during mock login.", "danger")
         return redirect(url_for('main.index'))
 
-    redirect_uri = url_for('auth.authorize', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    client_id = current_app.config.get('GOOGLE_CLIENT_ID')
+    client_secret = current_app.config.get('GOOGLE_CLIENT_SECRET')
+    if not client_id or not client_secret:
+        flash("Google Sign-In is not configured yet. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel settings.", "warning")
+        return redirect(url_for('main.index'))
+
+    try:
+        redirect_uri = url_for('auth.authorize', _external=True)
+        return oauth.google.authorize_redirect(redirect_uri)
+    except Exception as exc:
+        current_app.logger.exception("Google OAuth authorize_redirect error: %s", exc)
+        flash("Failed to initiate Google Sign-In. Please check your Google OAuth credentials.", "danger")
+        return redirect(url_for('main.index'))
+
 
 
 @auth_bp.route('/authorize')
