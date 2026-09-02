@@ -81,6 +81,8 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
+    is_anonymous = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=get_ist_time)
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+

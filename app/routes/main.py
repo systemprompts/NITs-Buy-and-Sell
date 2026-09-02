@@ -128,11 +128,19 @@ def item_detail(item_id):
 def post_comment(item_id):
     Item.query.get_or_404(item_id)
     content = (request.form.get('content') or '').strip()
+    is_anonymous = request.form.get('is_anonymous') in ('1', 'on', 'true')
     if content:
-        db.session.add(Comment(content=content[:2000], item_id=item_id, user_id=current_user.id))
+        comment = Comment(
+            content=content[:2000],
+            is_anonymous=is_anonymous,
+            item_id=item_id,
+            user_id=current_user.id
+        )
+        db.session.add(comment)
         db.session.commit()
-        flash("Comment added.", "success")
+        flash("Question posted successfully.", "success")
     return redirect(url_for('main.item_detail', item_id=item_id))
+
 
 
 @main_bp.route('/item/<int:item_id>/status', methods=['POST'])

@@ -145,7 +145,15 @@ def create_app(config_class=Config):
         with app.app_context():
             try:
                 db.create_all()
+                from sqlalchemy import text
+                with db.engine.connect() as conn:
+                    try:
+                        conn.execute(text("ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT FALSE"))
+                        conn.commit()
+                    except Exception:
+                        pass
             except Exception as exc:  # noqa: BLE001
                 app.logger.error("db.create_all() failed: %s", exc)
 
     return app
+

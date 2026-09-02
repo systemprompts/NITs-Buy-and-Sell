@@ -35,14 +35,25 @@
             <div class="comment-list">
                 {% for c in item.comments %}
                     <div class="comment">
-                        <img class="avatar sm" src="{{ ui.avatar_src(c.author, revealed) }}" alt="">
-                        <div>
-                            <p class="comment-head">
-                                <span class="comment-name">{{ ui.display_name(c.author.name, revealed) }}</span>
-                                <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
-                            </p>
-                            <p>{{ c.content }}</p>
-                        </div>
+                        {% if c.is_anonymous %}
+                            <img class="avatar sm" src="https://ui-avatars.com/api/?name=Anonymous&background=64748b&color=fff" alt="Anonymous">
+                            <div>
+                                <p class="comment-head">
+                                    <span class="comment-name">Anonymous_{{ c.user_id }}</span>
+                                    <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
+                                </p>
+                                <p>{{ c.content }}</p>
+                            </div>
+                        {% else %}
+                            <img class="avatar sm" src="{{ ui.avatar_src(c.author, revealed) }}" alt="">
+                            <div>
+                                <p class="comment-head">
+                                    <span class="comment-name">{{ ui.display_name(c.author.name, revealed) }}</span>
+                                    <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
+                                </p>
+                                <p>{{ c.content }}</p>
+                            </div>
+                        {% endif %}
                     </div>
                 {% else %}
                     <p class="muted">No questions yet.</p>
@@ -50,15 +61,21 @@
             </div>
 
             {% if revealed %}
-            <form class="comment-form" method="POST" action="{{ url_for('main.post_comment', item_id=item.id) }}">
+            <form class="comment-form-v2" method="POST" action="{{ url_for('main.post_comment', item_id=item.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="text" name="content" required maxlength="2000" placeholder="Ask the seller a question&hellip;">
-                <button type="submit" class="btn btn-primary">Post</button>
+                <textarea name="content" required maxlength="2000" rows="3" placeholder="Ask the seller a question&hellip;"></textarea>
+                <div class="comment-form-footer">
+                    <label class="checkbox">
+                        <input type="checkbox" name="is_anonymous" value="1"> Post anonymously (appears as Anonymous_{{ current_user.id }})
+                    </label>
+                    <button type="submit" class="btn btn-primary">Post Question</button>
+                </div>
             </form>
             {% else %}
             <p class="muted"><a href="{{ url_for('auth.login') }}">Sign in</a> to ask a question.</p>
             {% endif %}
         </section>
+
     </div>
 
     <aside class="detail-panel">
