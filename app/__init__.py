@@ -120,6 +120,17 @@ def create_app(config_class=Config):
         flash("Your session expired. Please try that again.", "warning")
         return redirect(request.referrer or url_for("main.index"))
 
+    @app.errorhandler(Exception)
+    def _handle_exception(e):
+        app.logger.exception("Unhandled Exception: %s", e)
+        if os.environ.get("SHOW_DEBUG_ERRORS") == "true":
+            import traceback
+            return Response(f"<h1>500 Internal Server Error</h1><pre>{traceback.format_exc()}</pre>", status=500, mimetype="text/html")
+        return render_template("error.html", code=500,
+                               title="Server Error",
+                               message="An unexpected error occurred. Please try again later."), 500
+
+
     @app.cli.command("init-db")
     def init_db():
         """Create all database tables."""
