@@ -123,8 +123,13 @@ def create_app(config_class=Config):
     @app.errorhandler(Exception)
     def _handle_exception(e):
         app.logger.exception("Unhandled Exception: %s", e)
-        import traceback
-        return Response(f"<h1>500 Internal Server Error</h1><pre>{traceback.format_exc()}</pre>", status=500, mimetype="text/html")
+        if os.environ.get("SHOW_DEBUG_ERRORS") == "true":
+            import traceback
+            return Response(f"<h1>500 Internal Server Error</h1><pre>{traceback.format_exc()}</pre>", status=500, mimetype="text/html")
+        return render_template("error.html", code=500,
+                               title="Server Error",
+                               message="An unexpected error occurred. Please try again later."), 500
+
 
 
 

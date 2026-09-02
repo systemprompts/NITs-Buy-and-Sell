@@ -94,5 +94,8 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", None)
     GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
-    MOCK_AUTH = _bool(os.environ.get("MOCK_AUTH"), False)
+    # On Vercel or production, MOCK_AUTH must be explicitly True, otherwise default to False
+    _mock_in_env = os.environ.get("MOCK_AUTH")
+    MOCK_AUTH = _bool(_mock_in_env, False) if _mock_in_env is not None else (not os.environ.get("VERCEL"))
+
     ALLOWED_DOMAIN = "nits.ac.in"
