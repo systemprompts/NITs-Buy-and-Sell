@@ -24,10 +24,20 @@ def _parse_condition(raw):
 
 @main_bp.route('/')
 def index():
-    items = Item.query.order_by(Item.created_at.desc()).all()
+    try:
+        items = Item.query.order_by(Item.created_at.desc()).all()
+    except Exception as exc:
+        current_app.logger.error("Error querying items on index page: %s", exc)
+        try:
+            db.create_all()
+            items = Item.query.order_by(Item.created_at.desc()).all()
+        except Exception as exc2:
+            current_app.logger.error("Auto db.create_all() failed on index: %s", exc2)
+            items = []
     available = sum(1 for i in items if not i.is_sold)
     return render_template('index.html', items=items,
                            total_count=len(items), available_count=available)
+
 
 
 @main_bp.route('/post', methods=['GET', 'POST'])
