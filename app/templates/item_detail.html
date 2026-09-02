@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as ui with context %}
+
+{% block title %}{{ item.title }} — nits.shop{% endblock %}
+{% block description %}{{ item.title }}: {{ item.price | rupee }}. {{ item.description | truncate(140, true) }}{% endblock %}
+
+{% block content %}
+{% set revealed = current_user.is_authenticated %}
+<a href="{{ url_for('main.index') }}" class="back-link">&larr; All listings</a>
+
+<article class="detail">
+    <div class="detail-gallery">
+        {% if item.images %}
+            <div class="gallery-main{{ ' is-sold' if item.is_sold }}" id="mainContainer"
+                 onmousemove="zoom(event)" onmouseenter="showZoom()" onmouseleave="hideZoom()">
+                <img id="mainImage" src="{{ item.images[0].url }}" alt="{{ item.title }}">
+                {% if item.is_sold %}{{ ui.sold_stamp() }}{% endif %}
+            </div>
+            <div id="zoomResult" class="zoom-box"></div>
+            {% if item.images | length > 1 %}
+            <div class="gallery-thumbs">
+                {% for img in item.images %}
+                    <button type="button" class="thumb{{ ' active' if loop.first }}" onclick="switchImage(this, '{{ img.url }}')">
+                        <img src="{{ img.url }}" alt="{{ item.title }} — photo {{ loop.index }}" loading="lazy">
+                    </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="gallery-main"><img src="{{ url_for('static', filename='images/no-image.svg') }}" alt=""></div>
+        {% endif %}
+
+        <section class="comments">
+            <h2>Questions <span class="count">{{ item.comments | length }}</span></h2>
+            <div class="comment-list">
+                {% for c in item.comments %}
+                    <div class="comment">
+                        <img class="avatar sm" src="{{ ui.avatar_src(c.author, revealed) }}" alt="">
+                        <div>
+                            <p class="comment-head">
+                                <span class="comment-name">{{ ui.display_name(c.author.name, revealed) }}</span>
+                                <span class="mono muted">{{ c.created_at.strftime('%d %b, %H:%M') }}</span>
+                            </p>
+                            <p>{{ c.content }}</p>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="muted">No questions yet.</p>
+                {% endfor %}
+            </div>
+
+            {% if revealed %}
+            <form class="comment-form" method="POST" action="{{ url_for('main.post_comment', item_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="content" required maxlength="2000" placeholder="Ask the seller a question&hellip;">
+                <button type="submit" class="btn btn-primary">Post</button>
+            </form>
+            {% else %}
+            <p class="muted"><a href="{{ url_for('auth.login') }}">Sign in</a> to ask a question.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <aside class="detail-panel">
+        <div class="panel-status">
+            <span class="status {{ 'status-sold' if item.is_sold else 'status-live' }}">{{ item.status }}</span>
+            {% if item.is_negotiable %}<span class="tag">Negotiable</span>{% endif %}
+        </div>
+
+        <h1 class="detail-title">{{ item.title }}</h1>
+        <p class="detail-price">{{ item.price | rupee }}</p>
+
+        <dl class="spec">
+            {% if item.condition %}
+            <div><dt>Condition</dt><dd>{{ ui.cond_chip(item.condition, show_label=true) }}</dd></div>
+            {% endif %}
+            {% if item.condition_details %}
+            <div><dt>Notes</dt><dd>{{ item.condition_details }}</dd></div>
+            {% endif %}
+            {% if item.online_price or item.online_link %}
+            <div><dt>Online</dt><dd>
+                {% if item.online_price %}<span class="strike">{{ item.online_price | rupee }}</span>{% endif %}
+                {% if item.online_link %}<a href="{{ item.online_link }}" target="_blank" rel="noopener noreferrer nofollow">view listing &nearr;</a>{% endif %}
+            </dd></div>
+            {% endif %}
+            <div><dt>Listed</dt><dd class="mono">{{ item.created_at.strftime('%d %b %Y, %H:%M') }} IST</dd></div>
+        </dl>
+
+        <div class="detail-desc">
+            <h2>Description</h2>
+            <p>{{ item.description }}</p>
+        </div>
+
+        <div class="seller">
+            <h2>Seller</h2>
+            <div class="seller-id">
+                <img class="avatar" src="{{ ui.avatar_src(item.seller, revealed) }}" alt="">
+                <div>
+                    <p class="seller-name">{{ ui.display_name(item.seller.name, revealed) }}</p>
+                    {% if revealed %}<p class="mono muted">{{ item.seller.email }}</p>{% endif %}
+                </div>
+            </div>
+
+            {% if revealed %}
+                {% if item.contacts %}
+                <ul class="contacts">
+                    {% for c in item.contacts %}
+                    <li>
+                        <span class="contacts-type">{{ c.contact_type }}</span>
+                        {% if c.contact_type == 'email' %}
+                            <a href="mailto:{{ c.contact_value }}">{{ c.contact_value }}</a>
+                        {% elif c.contact_type == 'whatsapp' %}
+                            {% set wa = c.contact_value | replace(' ', '') | replace('+', '') %}
+                            <a href="https://wa.me/{{ wa }}" target="_blank" rel="noopener noreferrer">{{ c.contact_value }}</a>
+                        {% elif c.contact_type == 'phone' %}
+                            <a href="tel:{{ c.contact_value }}">{{ c.contact_value }}</a>
+                        {% else %}
+                            <span>{{ c.contact_value }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="muted">No extra contact details — use the email above.</p>
+                {% endif %}
+
+                {% if current_user.id == item.seller_id %}
+                <div class="owner-actions">
+                    <form method="POST" action="{{ url_for('main.toggle_status', item_id=item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline btn-full">
+                            {{ 'Mark as available' if item.is_sold else 'Mark as sold' }}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('main.delete_item', item_id=item.id) }}"
+                          onsubmit="return confirm('De-list this item? It removes the listing and its photos for good.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-full">De-list</button>
+                    </form>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="signin-gate">
+                    <p>Contact details are shown to signed-in students.</p>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-google">
+                        <img src="{{ url_for('static', filename='images/google-logo.svg') }}" alt="" width="16" height="16"> Sign in to contact
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </aside>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchImage(btn, src) {
+        document.getElementById('mainImage').src = src;
+        document.querySelectorAll('.thumb').forEach(function (el) { el.classList.remove('active'); });
+        btn.classList.add('active');
+        var zoom = document.getElementById('zoomResult');
+        if (zoom) zoom.style.backgroundImage = "url('" + src + "')";
+    }
+
+    function showZoom() {
+        var zoom = document.getElementById('zoomResult');
+        var main = document.getElementById('mainImage');
+        if (zoom && main) {
+            zoom.style.backgroundImage = "url('" + main.src + "')";
+            zoom.classList.add('visible');
+        }
+    }
+
+    function hideZoom() {
+        var zoom = document.getElementById('zoomResult');
+        if (zoom) zoom.classList.remove('visible');
+    }
+
+    function zoom(e) {
+        var zoomer = e.currentTarget;
+        var result = document.getElementById('zoomResult');
+        if (!result) return;
+        var x = Math.max(0, Math.min(100, (e.offsetX / zoomer.offsetWidth) * 100));
+        var y = Math.max(0, Math.min(100, (e.offsetY / zoomer.offsetHeight) * 100));
+        result.style.backgroundPosition = x + '% ' + y + '%';
+    }
+</script>
+{% endblock %}

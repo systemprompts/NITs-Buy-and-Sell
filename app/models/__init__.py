@@ -1,0 +1,12 @@
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+
+db = SQLAlchemy()
+login_manager = LoginManager()
+
+from app.models.user import User
+from app.models.item import Item, ItemImage, ItemContact, Comment
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))

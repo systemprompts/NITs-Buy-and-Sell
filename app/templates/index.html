@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as ui with context %}
+
+{% block content %}
+<section class="listing-head">
+    <div class="listing-head-text">
+        <p class="eyebrow">NIT Silchar · campus exchange</p>
+        <h1>Buy and sell, on campus.</h1>
+        <p class="lede">Second-hand cycles, drawing kits, calculators, hostel stuff — from students, to students. No shipping, no strangers. You meet, you pay, you carry it back.</p>
+        <p class="listing-meta">
+            <span><b>{{ total_count }}</b> listed</span>
+            <span><b>{{ available_count }}</b> available</span>
+            <span>meet-up only</span>
+        </p>
+    </div>
+    <div class="listing-head-cta">
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.post_item') }}" class="btn btn-primary">Post an item</a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                <img src="{{ url_for('static', filename='images/google-logo.svg') }}" alt="" width="16" height="16"> Sign in with @nits.ac.in
+            </a>
+            <p class="hint">Only @nits.ac.in accounts can post or see contacts.</p>
+        {% endif %}
+    </div>
+</section>
+
+{% if items %}
+<ul class="grid">
+    {% for item in items %}
+    <li>
+        <a class="card{{ ' is-sold' if item.is_sold }}" href="{{ url_for('main.item_detail', item_id=item.id) }}">
+            <div class="card-media">
+                {% if item.images %}
+                    <img src="{{ item.images[0].url }}" alt="{{ item.title }}" loading="lazy">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/no-image.svg') }}" alt="" loading="lazy">
+                {% endif %}
+                {% if item.is_sold %}{{ ui.sold_stamp() }}{% endif %}
+            </div>
+            <div class="card-body">
+                <h2 class="card-title">{{ item.title }}</h2>
+                <p class="card-price">{{ item.price | rupee }}</p>
+                <div class="tag-row">
+                    {{ ui.cond_chip(item.condition) }}
+                    {% if item.is_negotiable %}<span class="tag">NEG</span>{% endif %}
+                </div>
+            </div>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="empty">
+    <h2>Nothing listed yet</h2>
+    <p>Be the first — post something you want to sell.</p>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.post_item') }}" class="btn btn-primary">Post an item</a>
+    {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in with @nits.ac.in</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{# Shared UI partials. Import with context so CONDITIONS is available:
+   {% import '_macros.html' as ui with context %} #}
+
+{# ---- Condition meter chip (the signature element) -------------------- #}
+{% macro cond_chip(level, show_label=false) -%}
+  {%- if level and level in CONDITIONS -%}
+    {%- set c = CONDITIONS[level] -%}
+    <span class="cond" data-level="{{ level }}"
+          title="C{{ level }} · {{ c.label }} — {{ c.detail }}">
+      <span class="cond-bars" aria-hidden="true">
+        {%- for i in range(1, 7) %}<i class="{{ 'on' if i <= level }}"></i>{% endfor -%}
+      </span>
+      <span class="cond-code">C{{ level }}</span>
+      {%- if show_label %}<span class="cond-name">{{ c.label }}</span>{% endif -%}
+    </span>
+  {%- endif -%}
+{%- endmacro %}
+
+{# ---- Name shown to visitors (masked unless signed in) --------------- #}
+{% macro display_name(name, revealed) -%}
+  {%- if revealed -%}{{ name }}
+  {%- elif name and name | length > 1 -%}{{ name[0] }}***{{ name[-1] }}
+  {%- else -%}{{ (name or '?')[0] }}***
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro avatar_src(user, revealed) -%}
+  {%- if revealed and user.picture -%}{{ user.picture }}
+  {%- else -%}https://ui-avatars.com/api/?length=1&background=145C63&color=fff&name={{ display_name(user.name, revealed) | urlencode }}
+  {%- endif -%}
+{%- endmacro %}
+
+{# ---- SOLD stamp overlay for images --------------------------------- #}
+{% macro sold_stamp() -%}
+  <span class="sold-stamp" aria-hidden="true">Sold</span>
+{%- endmacro %}

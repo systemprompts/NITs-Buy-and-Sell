@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Post an item — nits.shop{% endblock %}
+{% block description %}List something for sale on the NIT Silchar campus exchange.{% endblock %}
+
+{% block content %}
+<div class="form-panel">
+    <p class="eyebrow">New listing</p>
+    <h1>Post an item</h1>
+    <p class="lede">Photos are compressed in your browser before upload — no file-size fiddling needed.</p>
+
+    <form action="{{ url_for('main.post_item') }}" method="POST" enctype="multipart/form-data" id="postForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+            <label for="title">Title <span class="req">*</span></label>
+            <input type="text" id="title" name="title" required maxlength="100" placeholder="e.g. Engineering drawing kit">
+        </div>
+
+        <div class="field">
+            <label for="price">Campus price (₹) <span class="req">*</span></label>
+            <div class="row">
+                <input class="mono" type="number" id="price" name="price" min="0" step="1" required placeholder="500">
+                <label class="checkbox">
+                    <input type="checkbox" name="is_negotiable" id="is_negotiable"> Negotiable
+                </label>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="condition">Condition</label>
+            <select name="condition" id="condition">
+                <option value="" disabled selected>Select a grade</option>
+                {% for level in [6, 5, 4, 3, 2, 1] %}
+                    <option value="{{ level }}">C{{ level }} · {{ CONDITIONS[level].label }} — {{ CONDITIONS[level].detail }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="condition_details">Condition notes <span class="opt">optional</span></label>
+            <input type="text" id="condition_details" name="condition_details" maxlength="500" placeholder="Scratches, missing parts, how long you used it&hellip;">
+        </div>
+
+        <div class="field">
+            <label>Reference price <span class="opt">optional</span></label>
+            <div class="row">
+                <input type="url" id="online_link" name="online_link" placeholder="Amazon / Flipkart link" style="flex:2">
+                <input class="mono" type="number" id="online_price" name="online_price" min="0" step="1" placeholder="₹ online" style="flex:1">
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Photos <span class="req">*</span> <span class="opt">up to 5 · compressed to ≤ 2 MB each</span></label>
+            <div id="imageInputsContainer"></div>
+            <div class="image-tray">
+                <div id="imagePreview" class="image-preview"></div>
+                <button type="button" id="addImageBtn" class="add-image" aria-label="Add a photo">+</button>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="description">Description <span class="req">*</span></label>
+            <textarea id="description" name="description" rows="5" required placeholder="What it is, why you're selling, anything a buyer should know."></textarea>
+        </div>
+
+        <div class="field">
+            <label>Contact <span class="req">*</span></label>
+            <div id="contactFields">
+                <div class="contact-row">
+                    <select name="contact_type[]">
+                        <option value="phone">Phone</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="email">Email</option>
+                        <option value="hostel">Hostel room</option>
+                    </select>
+                    <input type="text" name="contact_value[]" required placeholder="Number, address or room">
+                    <button type="button" class="icon-btn" onclick="addContactField()" aria-label="Add another contact">+</button>
+                </div>
+            </div>
+            <p class="hint">Only signed-in @nits.ac.in students can see these.</p>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">Post item</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const addImageBtn = document.getElementById('addImageBtn');
+    const imageInputsContainer = document.getElementById('imageInputsContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const MAX_FILES = 5;
+    const ORIGINAL_MAX_MB = 25;          // reject absurdly large source files
+    const TARGET_BYTES = 900 * 1024;     // aim well under Vercel's ~4.5 MB request cap
+    const TOTAL_MAX_BYTES = 4 * 1024 * 1024;
+    const MAX_DIMENSION = 1600;
+    let fileCount = 0;
+
+    // Downscale + re-encode in the browser so uploads stay small (the server
+    // also compresses to <= 2 MB as a safety net).
+    async function compressImage(file) {
+        if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+        let bitmap;
+        try {
+            bitmap = await createImageBitmap(file);
+        } catch (e) {
+            return file;
+        }
+        let { width, height } = bitmap;
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+        if (bitmap.close) bitmap.close();
+
+        let quality = 0.85;
+        let blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+        while (blob && blob.size > TARGET_BYTES && quality > 0.4) {
+            quality -= 0.12;
+            blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+        }
+        if (!blob || blob.size >= file.size) return file;
+        return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    }
+
+    addImageBtn.addEventListener('click', function () {
+        if (fileCount >= MAX_FILES) {
+            alert('You can add up to ' + MAX_FILES + ' photos.');
+            return;
+        }
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.name = 'images';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+
+        fileInput.addEventListener('change', async function () {
+            const files = Array.from(this.files);
+            if (files.length === 0) { this.remove(); return; }
+
+            const original = files[0];
+            if (original.size > ORIGINAL_MAX_MB * 1024 * 1024) {
+                alert(original.name + ' is larger than ' + ORIGINAL_MAX_MB + ' MB. Please choose a smaller photo.');
+                this.remove();
+                return;
+            }
+
+            addImageBtn.classList.add('busy');
+            let processed;
+            try { processed = await compressImage(original); }
+            catch (e) { processed = original; }
+            addImageBtn.classList.remove('busy');
+
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(processed);
+                this.files = dt.files;
+            } catch (e) {
+                processed = original; // very old browser: submit the original
+            }
+
+            fileCount++;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'thumb-preview';
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(processed);
+
+            const sizeTag = document.createElement('span');
+            sizeTag.className = 'size-tag';
+            sizeTag.textContent = Math.round(processed.size / 1024) + ' KB';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-btn';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.addEventListener('click', function () {
+                wrapper.remove();
+                fileInput.remove();
+                fileCount--;
+                addImageBtn.style.display = '';
+            });
+
+            wrapper.append(img, sizeTag, removeBtn);
+            imagePreview.appendChild(wrapper);
+
+            if (fileCount >= MAX_FILES) addImageBtn.style.display = 'none';
+        });
+
+        imageInputsContainer.appendChild(fileInput);
+        fileInput.click();
+    });
+
+    function addContactField() {
+        const row = document.createElement('div');
+        row.className = 'contact-row';
+        row.innerHTML =
+            '<select name="contact_type[]">' +
+            '<option value="phone">Phone</option>' +
+            '<option value="whatsapp">WhatsApp</option>' +
+            '<option value="email">Email</option>' +
+            '<option value="hostel">Hostel room</option>' +
+            '</select>' +
+            '<input type="text" name="contact_value[]" required placeholder="Number, address or room">' +
+            '<button type="button" class="icon-btn danger" onclick="this.parentElement.remove()" aria-label="Remove">&minus;</button>';
+        document.getElementById('contactFields').appendChild(row);
+    }
+
+    document.getElementById('postForm').addEventListener('submit', function (e) {
+        if (fileCount === 0) {
+            e.preventDefault();
+            alert('Please add at least one photo.');
+            return;
+        }
+        let total = 0;
+        document.querySelectorAll('input[name="images"]').forEach(function (inp) {
+            if (inp.files[0]) total += inp.files[0].size;
+        });
+        if (total > TOTAL_MAX_BYTES) {
+            e.preventDefault();
+            alert('Your photos are still too large to upload together. Remove one or choose smaller photos.');
+        }
+    });
+</script>
+{% endblock %}

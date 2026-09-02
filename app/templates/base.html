@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% set page_title = self.title() %}
+    <title>{% block title %}nits.shop — NIT Silchar campus exchange{% endblock %}</title>
+    <meta name="description" content="{% block description %}Buy and sell used gear with other NIT Silchar students. No shipping, no strangers — meet on campus. Sign in with your @nits.ac.in account.{% endblock %}">
+
+    <link rel="canonical" href="{{ SITE_URL }}{{ request.path }}">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="nits.shop">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:description" content="{{ self.description() }}">
+    <meta property="og:url" content="{{ SITE_URL }}{{ request.path }}">
+    <meta property="og:image" content="{{ SITE_URL }}{{ url_for('static', filename='images/og-image.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <meta name="theme-color" content="#F4F1E8" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#14150F" media="(prefers-color-scheme: dark)">
+
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
+
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="bar">
+            <a href="{{ url_for('main.index') }}" class="wordmark">nits<span class="dot">.</span><span class="tld">shop</span></a>
+            <nav class="site-nav">
+                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch colour theme">Dark</button>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('main.post_item') }}" class="btn btn-primary">Post an item</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link">Log out</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-google">
+                        <img src="{{ url_for('static', filename='images/google-logo.svg') }}" alt="" width="16" height="16"> Sign in
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-stack" role="status" aria-live="polite">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="page">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <span class="wordmark small">nits<span class="dot">.</span><span class="tld">shop</span></span>
+        <span>Built for NIT Silchar students</span>
+        <span>An independent student project — not run by the institute</span>
+    </footer>
+
+    <script>
+      (function () {
+        var btn = document.getElementById('themeToggle');
+        if (!btn) return;
+        var root = document.documentElement;
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        function current() { return root.getAttribute('data-theme') || (mq.matches ? 'dark' : 'light'); }
+        function label() { btn.textContent = current() === 'dark' ? 'Light' : 'Dark'; }
+        label();
+        btn.addEventListener('click', function () {
+          var next = current() === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (e) {}
+          label();
+        });
+      })();
+
+      setTimeout(function () {
+        document.querySelectorAll('.flash').forEach(function (el) {
+          el.style.transition = 'opacity .4s, transform .4s';
+          el.style.opacity = '0';
+          el.style.transform = 'translateX(20px)';
+          setTimeout(function () { el.remove(); }, 400);
+        });
+      }, 5000);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

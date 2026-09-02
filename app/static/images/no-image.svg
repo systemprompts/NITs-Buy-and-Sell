@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450" viewBox="0 0 600 450">
+  <rect width="600" height="450" fill="#FBF9F3"/>
+  <g fill="none" stroke="#14203A" stroke-opacity="0.28" stroke-width="4">
+    <rect x="205" y="150" width="190" height="140" rx="8"/>
+    <circle cx="252" cy="196" r="16"/>
+    <path d="M214 278l52-52 40 40 32-28 44 40" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="300" y="332" fill="#5B6270" font-family="'IBM Plex Mono', ui-monospace, monospace" font-size="18" letter-spacing="2" text-anchor="middle">NO PHOTO</text>
+</svg>
